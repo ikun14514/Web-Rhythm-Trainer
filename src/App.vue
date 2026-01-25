@@ -45,6 +45,7 @@
           :show-keyboard="showKeyboard"
           :show-staff="showStaff"
           :show-black-keys="showBlackKeys"
+          :selected-black-keys="selectedBlackKeys"
           :is-practicing="isPracticing"
           :is-paused="isPaused"
           @update:note-range="noteRange = $event"
@@ -54,6 +55,7 @@
           @update:show-keyboard="showKeyboard = $event"
           @update:show-staff="showStaff = $event"
           @update:show-black-keys="showBlackKeys = $event"
+          @update:selected-black-keys="selectedBlackKeys = $event"
           @start-practice="startPractice"
           @stop-practice="stopPractice"
           @pause-practice="pausePractice"
@@ -81,6 +83,7 @@ const inputMode = ref('keyboard')
 const showKeyboard = ref(true)
 const showStaff = ref(false)
 const showBlackKeys = ref(true)
+const selectedBlackKeys = ref([])
 const isPracticing = ref(false)
 const isPaused = ref(false)
 const canInput = ref(false)
@@ -89,6 +92,7 @@ const correctAnswer = ref(null)
 const currentQuestion = ref(null)
 const userAnswer = ref(null)
 const userAnswers = ref([])
+const currentQuestionIndex = ref(0)
 
 const audioEngine = useAudioEngine()
 const { midiEnabled, connectMIDI, disconnectMIDI } = useMIDIInput()
@@ -108,12 +112,35 @@ const visibleNotes = computed(() => {
   return result
 })
 
+const practiceNotes = computed(() => {
+  const notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
+  const octaves = [3, 4, 5]
+  const result = []
+  
+  octaves.forEach(octave => {
+    notes.forEach(note => {
+      const fullName = `${note}${octave}`
+      const isBlackKey = note.includes('#')
+      
+      if (!isBlackKey || selectedBlackKeys.value.includes(fullName)) {
+        result.push({ note, octave, fullName })
+      }
+    })
+  })
+  
+  return result
+})
+
 let practiceInterval = null
 let beatCount = 0
 
 const startPractice = async () => {
   try {
     await audioEngine.init()
+    
+    if (practiceMode.value === 'scaleTraining') {
+      inputMode.value = 'microphone'
+    }
     
     if (inputMode.value === 'midi') {
       await connectMIDI()
@@ -127,6 +154,7 @@ const startPractice = async () => {
     feedback.value = null
     correctAnswer.value = null
     userAnswer.value = null
+    currentQuestionIndex.value = 0
     
     audioEngine.startMetronome(bpm.value.slider, handleBeat)
     
@@ -186,7 +214,8 @@ const handleBeat = (beatNumber) => {
 }
 
 const generateQuestion = () => {
-  const notes = visibleNotes.value
+  currentQuestionIndex.value = 0
+  const notes = practiceNotes.value
   const startIndex = notes.findIndex(n => n.fullName === noteRange.value.start)
   const endIndex = notes.findIndex(n => n.fullName === noteRange.value.end)
   const availableNotes = notes.slice(startIndex, endIndex + 1)
@@ -208,59 +237,9 @@ const generateQuestion = () => {
       type: 'melodic', 
       notes: [availableNotes[index1], availableNotes[index2]] 
     }
-  } else if (practiceMode.value === 'chord') {
-    const chordTypes = ['major', 'minor', 'diminished', 'augmented']
-    const chordType = chordTypes[Math.floor(Math.random() * chordTypes.length)]
-    const rootIndex = Math.floor(Math.random() * (availableNotes.length - 8))
-    const rootNote = availableNotes[rootIndex]
-    
-    const chordNotes = [rootNote]
-    const intervals = getChordIntervals(chordType)
-    intervals.forEach(interval => {
-      const noteIndex = rootIndex + interval
-      if (noteIndex < availableNotes.length) {
-        chordNotes.push(availableNotes[noteIndex])
-      }
-    })
-    
-    currentQuestion.value = { type: 'chord', notes: chordNotes, chordType }
-  } else if (practiceMode.value === 'scale') {
-    const scaleTypes = ['major', 'minor', 'pentatonic', 'blues']
-    const scaleType = scaleTypes[Math.floor(Math.random() * scaleTypes.length)]
-    const rootIndex = Math.floor(Math.random() * (availableNotes.length - 12))
-    const rootNote = availableNotes[rootIndex]
-    
-    const scaleNotes = [rootNote]
-    const intervals = getScaleIntervals(scaleType)
-    intervals.forEach(interval => {
-      const noteIndex = rootIndex + interval
-      if (noteIndex < availableNotes.length) {
-        scaleNotes.push(availableNotes[noteIndex])
-      }
-    })
-    
-    currentQuestion.value = { type: 'scale', notes: scaleNotes, scaleType }
+  } else if (practiceMode.value === 'scaleTraining') {
+    currentQuestion.value = { type: 'scaleTraining', notes: [...availableNotes] }
   }
-}
-
-const getChordIntervals = (chordType) => {
-  const chordIntervals = {
-    'major': [4, 7],
-    'minor': [3, 7],
-    'diminished': [3, 6],
-    'augmented': [4, 8]
-  }
-  return chordIntervals[chordType] || [4, 7]
-}
-
-const getScaleIntervals = (scaleType) => {
-  const scaleIntervals = {
-    'major': [2, 4, 5, 7, 9, 11],
-    'minor': [2, 3, 5, 7, 8, 10],
-    'pentatonic': [2, 4, 7, 9],
-    'blues': [3, 5, 6, 7, 10]
-  }
-  return scaleIntervals[scaleType] || [2, 4, 5, 7, 9, 11]
 }
 
 const playQuestion = () => {
@@ -281,11 +260,7 @@ const playQuestion = () => {
     setTimeout(() => {
       audioEngine.playNote(note2.note, note2.octave, beatDuration)
     }, beatDuration * 1000)
-  } else if (currentQuestion.value.type === 'chord') {
-    currentQuestion.value.notes.forEach(note => {
-      audioEngine.playNote(note.note, note.octave, beatDuration)
-    })
-  } else if (currentQuestion.value.type === 'scale') {
+  } else if (currentQuestion.value.type === 'scaleTraining') {
     currentQuestion.value.notes.forEach((note, index) => {
       setTimeout(() => {
         audioEngine.playNote(note.note, note.octave, beatDuration * 0.5)
@@ -315,21 +290,19 @@ const handleNoteInput = (note) => {
     } else {
       feedback.value = 'wrong'
     }
-  } else if (practiceMode.value === 'chord' || practiceMode.value === 'scale') {
-    if (!userAnswers.value.includes(note.fullName)) {
-      userAnswers.value.push(note.fullName)
-    }
+  } else if (practiceMode.value === 'scaleTraining') {
+    userAnswer.value = note.fullName
+    let isCorrect = note.fullName === currentQuestion.value.notes[currentQuestionIndex.value].fullName
     
-    const allCorrect = currentQuestion.value.notes.every(n => 
-      userAnswers.value.includes(n.fullName)
-    )
-    
-    if (userAnswers.value.length === currentQuestion.value.notes.length) {
-      if (allCorrect) {
-        feedback.value = 'correct'
-      } else {
-        feedback.value = 'wrong'
+    if (isCorrect) {
+      feedback.value = 'correct'
+      currentQuestionIndex.value++
+      
+      if (currentQuestionIndex.value >= currentQuestion.value.notes.length) {
+        currentQuestionIndex.value = 0
       }
+    } else {
+      feedback.value = 'wrong'
     }
   }
   
@@ -346,22 +319,8 @@ const revealAnswer = () => {
   
   if (currentQuestion.value.type === 'single') {
     correctAnswer.value = currentQuestion.value.notes[0].fullName
-  } else if (currentQuestion.value.type === 'chord') {
-    const chordTypeNames = {
-      'major': '大三和弦',
-      'minor': '小三和弦',
-      'diminished': '减三和弦',
-      'augmented': '增三和弦'
-    }
-    correctAnswer.value = `${currentQuestion.value.notes.map(n => n.fullName).join(' - ')} (${chordTypeNames[currentQuestion.value.chordType]})`
-  } else if (currentQuestion.value.type === 'scale') {
-    const scaleTypeNames = {
-      'major': '大调音阶',
-      'minor': '小调音阶',
-      'pentatonic': '五声音阶',
-      'blues': '布鲁斯音阶'
-    }
-    correctAnswer.value = `${currentQuestion.value.notes.map(n => n.fullName).join(' - ')} (${scaleTypeNames[currentQuestion.value.scaleType]})`
+  } else if (currentQuestion.value.type === 'scaleTraining') {
+    correctAnswer.value = currentQuestion.value.notes.map(n => n.fullName).join(' - ')
   } else {
     correctAnswer.value = currentQuestion.value.notes.map(n => n.fullName).join(' - ')
   }

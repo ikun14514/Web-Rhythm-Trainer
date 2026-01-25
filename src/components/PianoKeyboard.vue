@@ -1,10 +1,10 @@
 <template>
-  <div class="piano-keyboard" v-if="showKeyboard">
+  <div class="piano-keyboard" v-if="props.showKeyboard">
     <div class="keyboard-container">
       <div 
-        v-for="note in notes" 
+        v-for="note in props.notes" 
         :key="note.fullName"
-        v-show="!note.note.includes('#') || showBlackKeys"
+        v-show="!note.note.includes('#') || props.showBlackKeys"
         :class="['key', note.note.includes('#') ? 'black-key' : 'white-key', { 
           'active': activeNote === note.fullName,
           'disabled': !canInput || !isPracticing
@@ -47,7 +47,6 @@ const props = defineProps({
 const emit = defineEmits(['note-clicked'])
 
 const activeNote = ref(null)
-const showKeyboard = ref(true)
 
 const getKeyStyle = (note) => {
   if (note.note.includes('#')) {
@@ -57,7 +56,8 @@ const getKeyStyle = (note) => {
     if (whiteKeyIndex >= 0 && whiteKeyIndex < whiteNotes.length - 1) {
       const leftPercent = ((whiteKeyIndex + 1) * 100 / whiteNotes.length) - 1.5
       return {
-        left: `${leftPercent}%`
+        left: `${leftPercent}%`,
+        position: 'absolute'
       }
     }
   }
@@ -139,10 +139,6 @@ onUnmounted(() => {
   window.removeEventListener('midi-note-on', handleMIDINote)
   window.removeEventListener('microphone-pitch', handleMicrophonePitch)
   window.removeEventListener('keydown', handleKeyPress)
-})
-
-defineExpose({
-  showKeyboard
 })
 </script>
 
