@@ -39,13 +39,13 @@ export function useAudioEngine() {
         const lowerNote = note.toLowerCase()
         
         if (note.includes('#')) {
-          fileName = `${lowerNote}${octave}.mp3`
+          fileName = `${lowerNote.replace('#', 's')}${octave}.mp3`
         } else {
           fileName = `${lowerNote}${octave}.mp3`
         }
         
         try {
-          const response = await fetch(`/sounds/${fileName}`)
+          const response = await fetch(`sounds/${fileName}`)
           const arrayBuffer = await response.arrayBuffer()
           const audioBuffer = await audioContext.value.decodeAudioData(arrayBuffer)
           audioBuffers.value[`${note}${octave}`] = audioBuffer
