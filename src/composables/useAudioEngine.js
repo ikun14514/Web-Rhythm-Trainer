@@ -45,7 +45,7 @@ export function useAudioEngine() {
         }
         
         try {
-          const response = await fetch(`/sounds/${fileName}`)
+          const response = await fetch(`sounds/${fileName}`)
           const arrayBuffer = await response.arrayBuffer()
           const audioBuffer = await audioContext.value.decodeAudioData(arrayBuffer)
           audioBuffers.value[`${note}${octave}`] = audioBuffer
