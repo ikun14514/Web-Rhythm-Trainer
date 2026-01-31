@@ -88,11 +88,30 @@
           </label>
         </div>
       </div>
+      
+      <div class="setting-group">
+        <h3>黑键选择</h3>
+        <div class="black-keys-selector">
+          <label 
+            v-for="blackKey in availableBlackKeys" 
+            :key="blackKey"
+            class="black-key-checkbox"
+          >
+            <input 
+              type="checkbox" 
+              :value="blackKey"
+              v-model="localSelectedBlackKeys"
+              @change="updateSelectedBlackKeys"
+            >
+            <span>{{ blackKey }}</span>
+          </label>
+        </div>
+      </div>
     </div>
     
     <div class="action-buttons">
       <button 
-        v-if="!isPracticing"
+        v-if="!props.isPracticing"
         class="start-btn"
         @click="togglePractice"
       >
@@ -100,14 +119,14 @@
       </button>
       <div v-else class="control-buttons">
         <button 
-          v-if="!isPaused"
+          v-if="!props.isPaused"
           class="pause-btn"
           @click="pausePractice"
         >
           暂停
         </button>
         <button 
-          v-if="isPaused"
+          v-if="props.isPaused"
           class="resume-btn"
           @click="resumePractice"
         >
@@ -125,7 +144,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 
 const props = defineProps({
   noteRange: {
@@ -156,6 +175,10 @@ const props = defineProps({
     type: Boolean,
     required: true
   },
+  selectedBlackKeys: {
+    type: Array,
+    default: () => []
+  },
   isPracticing: {
     type: Boolean,
     default: false
@@ -174,6 +197,7 @@ const emit = defineEmits([
   'update:show-keyboard',
   'update:show-staff',
   'update:show-black-keys',
+  'update:selected-black-keys',
   'start-practice',
   'stop-practice',
   'pause-practice',
@@ -187,6 +211,7 @@ const localInputMode = ref(props.inputMode)
 const localShowKeyboard = ref(props.showKeyboard)
 const localShowStaff = ref(props.showStaff)
 const localShowBlackKeys = ref(props.showBlackKeys)
+const localSelectedBlackKeys = ref([...props.selectedBlackKeys])
 
 const allNotes = computed(() => {
   const notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
@@ -202,12 +227,25 @@ const allNotes = computed(() => {
   return result
 })
 
+const availableBlackKeys = computed(() => {
+  const blackKeys = ['C#', 'D#', 'F#', 'G#', 'A#']
+  const octaves = [2, 3, 4, 5, 6]
+  const result = []
+  
+  octaves.forEach(octave => {
+    blackKeys.forEach(note => {
+      result.push(`${note}${octave}`)
+    })
+  })
+  
+  return result
+})
+
 const practiceModes = [
   { value: 'single', label: '单音识别' },
   { value: 'interval', label: '音程识别' },
   { value: 'melodic', label: '旋律音程' },
-  { value: 'chord', label: '和弦识别' },
-  { value: 'scale', label: '音阶识别' }
+  { value: 'scaleTraining', label: '爬音阶训练' }
 ]
 
 const inputModes = [
@@ -254,6 +292,10 @@ const updateShowBlackKeys = () => {
   emit('update:show-black-keys', localShowBlackKeys.value)
 }
 
+const updateSelectedBlackKeys = () => {
+  emit('update:selected-black-keys', [...localSelectedBlackKeys.value])
+}
+
 const togglePractice = () => {
   if (props.isPracticing) {
     emit('stop-practice')
@@ -273,6 +315,30 @@ const resumePractice = () => {
 const stopPractice = () => {
   emit('stop-practice')
 }
+
+watch(() => props.isPracticing, (newVal) => {
+  console.log('isPracticing changed:', newVal)
+})
+
+watch(() => props.isPaused, (newVal) => {
+  console.log('isPaused changed:', newVal)
+})
+
+watch(() => props.showKeyboard, (newVal) => {
+  localShowKeyboard.value = newVal
+}, { immediate: true })
+
+watch(() => props.showStaff, (newVal) => {
+  localShowStaff.value = newVal
+}, { immediate: true })
+
+watch(() => props.showBlackKeys, (newVal) => {
+  localShowBlackKeys.value = newVal
+}, { immediate: true })
+
+watch(() => props.selectedBlackKeys, (newVal) => {
+  localSelectedBlackKeys.value = [...newVal]
+}, { immediate: true, deep: true })
 </script>
 
 <style scoped>
@@ -404,6 +470,27 @@ const stopPractice = () => {
 .toggle-label input[type="checkbox"] {
   width: 18px;
   height: 18px;
+  cursor: pointer;
+}
+
+.black-keys-selector {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 8px;
+}
+
+.black-key-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: #6c757d;
+  cursor: pointer;
+}
+
+.black-key-checkbox input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
   cursor: pointer;
 }
 
