@@ -39,7 +39,7 @@ export function useAudioEngine() {
         const lowerNote = note.toLowerCase()
         
         if (note.includes('#')) {
-          fileName = `${lowerNote}${octave}.mp3`
+          fileName = `${lowerNote.replace('#', 's')}${octave}.mp3`
         } else {
           fileName = `${lowerNote}${octave}.mp3`
         }
