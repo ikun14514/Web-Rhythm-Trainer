@@ -32,6 +32,8 @@
           :input-mode="inputMode"
           :is-practicing="isPracticing"
           :can-input="canInput"
+          :show-keyboard="showKeyboard"
+          :show-black-keys="showBlackKeys"
           @note-clicked="handleNoteInput"
         />
       </div>

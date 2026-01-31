@@ -38,6 +38,10 @@ const props = defineProps({
     type: Boolean,
     default: false
   },
+  showKeyboard: {
+    type: Boolean,
+    default: true
+  },
   showBlackKeys: {
     type: Boolean,
     default: true

@@ -111,7 +111,7 @@
     
     <div class="action-buttons">
       <button 
-        v-if="!isPracticing"
+        v-if="!props.isPracticing"
         class="start-btn"
         @click="togglePractice"
       >
@@ -119,14 +119,14 @@
       </button>
       <div v-else class="control-buttons">
         <button 
-          v-if="!isPaused"
+          v-if="!props.isPaused"
           class="pause-btn"
           @click="pausePractice"
         >
           暂停
         </button>
         <button 
-          v-if="isPaused"
+          v-if="props.isPaused"
           class="resume-btn"
           @click="resumePractice"
         >
@@ -144,7 +144,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 
 const props = defineProps({
   noteRange: {
@@ -315,6 +315,30 @@ const resumePractice = () => {
 const stopPractice = () => {
   emit('stop-practice')
 }
+
+watch(() => props.isPracticing, (newVal) => {
+  console.log('isPracticing changed:', newVal)
+})
+
+watch(() => props.isPaused, (newVal) => {
+  console.log('isPaused changed:', newVal)
+})
+
+watch(() => props.showKeyboard, (newVal) => {
+  localShowKeyboard.value = newVal
+}, { immediate: true })
+
+watch(() => props.showStaff, (newVal) => {
+  localShowStaff.value = newVal
+}, { immediate: true })
+
+watch(() => props.showBlackKeys, (newVal) => {
+  localShowBlackKeys.value = newVal
+}, { immediate: true })
+
+watch(() => props.selectedBlackKeys, (newVal) => {
+  localSelectedBlackKeys.value = [...newVal]
+}, { immediate: true, deep: true })
 </script>
 
 <style scoped>
